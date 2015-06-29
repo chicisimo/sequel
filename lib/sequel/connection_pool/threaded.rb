@@ -127,8 +127,9 @@ class Sequel::ThreadedConnectionPool < Sequel::ConnectionPool
   # Assigns a connection to the supplied thread, if one
   # is available. The calling code should already have the mutex when
   # calling this.
-  def _acquire(thread)
+  def _acquire(thread, time = nil)
     if conn = available
+      Metriks.timer("sequel.acquire_connection").update(Time.now.to_f - time.to_f)
       @allocated[thread] = conn
     end
   end
@@ -155,9 +156,10 @@ class Sequel::ThreadedConnectionPool < Sequel::ConnectionPool
         # runtime performance.
         Thread.pass
 
-        until conn = _acquire(thread)
+        until conn = _acquire(thread, time)
           deadline ||= time + @timeout
           current_time = Time.now
+          Metriks.timer("sequel.acquire_connection").update(current_time - time.to_f) if current_time > deadline
           raise(::Sequel::PoolTimeout, "timeout: #{@timeout}, elapsed: #{current_time - time}") if current_time > deadline
           # :nocov:
           # It's difficult to get to this point, it can only happen if there is a race condition
