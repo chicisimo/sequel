@@ -159,7 +159,7 @@ class Sequel::ThreadedConnectionPool < Sequel::ConnectionPool
         until conn = _acquire(thread, time)
           deadline ||= time + @timeout
           current_time = Time.now
-          Metriks.timer("sequel.acquire_connection").update(current_time - time.to_f) if current_time > deadline
+          Metriks.timer("sequel.acquire_connection").update(current_time.to_f - time.to_f) if current_time > deadline
           raise(::Sequel::PoolTimeout, "timeout: #{@timeout}, elapsed: #{current_time - time}") if current_time > deadline
           # :nocov:
           # It's difficult to get to this point, it can only happen if there is a race condition
